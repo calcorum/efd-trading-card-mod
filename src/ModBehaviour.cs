@@ -20,29 +20,36 @@ namespace TradingCardMod
         // Base game item ID to clone (135 is commonly used for collectibles)
         private const int BASE_ITEM_ID = 135;
 
+        // Storage item IDs (high range to avoid conflicts)
+        private const int BINDER_ITEM_ID = 200001;
+        private const int CARD_BOX_ITEM_ID = 200002;
+
         private string _modPath = string.Empty;
         private List<TradingCard> _loadedCards = new List<TradingCard>();
         private List<Item> _registeredItems = new List<Item>();
         private List<GameObject> _createdGameObjects = new List<GameObject>();
         private Tag? _tradingCardTag;
+        private Item? _binderItem;
+        private Item? _cardBoxItem;
 
-        // Debug: track if we've spawned test items
+        // Debug: track spawn cycling
         private int _debugSpawnIndex = 0;
+        private List<Item> _allSpawnableItems = new List<Item>();
 
         /// <summary>
-        /// Called when the mod is loaded. Initialize the card system here.
+        /// Called when the GameObject is created. Initialize early to register items before saves load.
         /// </summary>
-        void Start()
+        void Awake()
         {
             _instance = this;
 
             // Get the mod's directory path
             _modPath = Path.GetDirectoryName(GetType().Assembly.Location) ?? string.Empty;
 
-            Debug.Log("[TradingCardMod] Mod initialized!");
+            Debug.Log("[TradingCardMod] Mod awakening (early init)...");
             Debug.Log($"[TradingCardMod] Mod path: {_modPath}");
 
-            // Apply Harmony patches
+            // Apply Harmony patches FIRST - before anything else
             Patches.ApplyPatches();
 
             try
@@ -50,8 +57,18 @@ namespace TradingCardMod
                 // Create our custom tag first
                 _tradingCardTag = TagHelper.GetOrCreateTradingCardTag();
 
-                // Load and register cards
+                // Load and register cards - do this early so saves can load them
                 LoadCardSets();
+
+                // Create storage items
+                CreateStorageItems();
+
+                // Build spawnable items list (cards + storage)
+                _allSpawnableItems.AddRange(_registeredItems);
+                if (_binderItem != null) _allSpawnableItems.Add(_binderItem);
+                if (_cardBoxItem != null) _allSpawnableItems.Add(_cardBoxItem);
+
+                Debug.Log("[TradingCardMod] Mod initialized successfully!");
             }
             catch (Exception ex)
             {
@@ -84,7 +101,41 @@ namespace TradingCardMod
 
             Debug.Log($"[TradingCardMod] Total cards loaded: {_loadedCards.Count}");
             Debug.Log($"[TradingCardMod] Total items registered: {_registeredItems.Count}");
-            Debug.Log("[TradingCardMod] DEBUG: Press F9 to spawn a trading card!");
+            Debug.Log("[TradingCardMod] DEBUG: Press F9 to spawn items (cycles through cards, then binder, then box)");
+        }
+
+        /// <summary>
+        /// Creates storage items (binder and card box) for holding trading cards.
+        /// </summary>
+        private void CreateStorageItems()
+        {
+            if (_tradingCardTag == null)
+            {
+                Debug.LogError("[TradingCardMod] Cannot create storage items - TradingCard tag not created!");
+                return;
+            }
+
+            // Create Card Binder (9 slots = 3x3 grid)
+            _binderItem = StorageHelper.CreateCardStorage(
+                BINDER_ITEM_ID,
+                "Card Binder",
+                "A binder for storing and organizing trading cards. Holds 9 cards.",
+                9,
+                0.5f,  // weight
+                500,   // value
+                _tradingCardTag
+            );
+
+            // Create Card Box (36 slots = bulk storage)
+            _cardBoxItem = StorageHelper.CreateCardStorage(
+                CARD_BOX_ITEM_ID,
+                "Card Box",
+                "A large box for bulk storage of trading cards. Holds 36 cards.",
+                36,
+                2.0f,  // weight
+                1500,  // value
+                _tradingCardTag
+            );
         }
 
         /// <summary>
@@ -92,37 +143,37 @@ namespace TradingCardMod
         /// </summary>
         void Update()
         {
-            // Debug: Press F9 to spawn a card
+            // Debug: Press F9 to spawn an item
             if (Input.GetKeyDown(KeyCode.F9))
             {
-                SpawnDebugCard();
+                SpawnDebugItem();
             }
         }
 
         /// <summary>
-        /// Spawns a trading card for testing purposes.
+        /// Spawns items for testing - cycles through cards, then storage items.
         /// </summary>
-        private void SpawnDebugCard()
+        private void SpawnDebugItem()
         {
-            if (_registeredItems.Count == 0)
+            if (_allSpawnableItems.Count == 0)
             {
-                Debug.LogWarning("[TradingCardMod] No cards registered to spawn!");
+                Debug.LogWarning("[TradingCardMod] No items registered to spawn!");
                 return;
             }
 
-            // Cycle through registered cards
-            Item cardToSpawn = _registeredItems[_debugSpawnIndex % _registeredItems.Count];
+            // Cycle through all spawnable items
+            Item itemToSpawn = _allSpawnableItems[_debugSpawnIndex % _allSpawnableItems.Count];
             _debugSpawnIndex++;
 
             try
             {
                 // Use game's utility to give item to player
-                ItemUtilities.SendToPlayer(cardToSpawn);
-                Debug.Log($"[TradingCardMod] Spawned card: {cardToSpawn.DisplayName} (ID: {cardToSpawn.TypeID})");
+                ItemUtilities.SendToPlayer(itemToSpawn);
+                Debug.Log($"[TradingCardMod] Spawned: {itemToSpawn.DisplayName} (ID: {itemToSpawn.TypeID})");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[TradingCardMod] Failed to spawn card: {ex.Message}");
+                Debug.LogError($"[TradingCardMod] Failed to spawn item: {ex.Message}");
             }
         }
 
@@ -386,10 +437,14 @@ namespace TradingCardMod
             }
             _createdGameObjects.Clear();
 
+            // Clean up storage items
+            StorageHelper.Cleanup();
+
             // Clean up tags
             TagHelper.Cleanup();
 
             _loadedCards.Clear();
+            _allSpawnableItems.Clear();
 
             Debug.Log("[TradingCardMod] Cleanup complete.");
         }

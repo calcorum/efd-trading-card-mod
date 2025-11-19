@@ -54,65 +54,24 @@ namespace TradingCardMod
     }
 
     // ==========================================================================
-    // Example Harmony Patches
-    // ==========================================================================
-    //
-    // Below are example patches showing common patterns. Uncomment and modify
-    // as needed once you've identified the game methods to patch.
-    //
-    // To find methods to patch, use a decompiler (ILSpy) on the game DLLs in:
-    // Duckov_Data/Managed/
+    // Safety Patches - Prevent crashes from missing mod items
     // ==========================================================================
 
-    /*
     /// <summary>
-    /// Example: Postfix patch that runs after a method completes.
-    /// Use case: Log when items are added to inventory, modify return values.
+    /// Patch to prevent crashes when loading saves with mod items that aren't registered yet.
+    /// Logs a warning for missing mod items instead of letting the game crash.
     /// </summary>
-    [HarmonyPatch(typeof(ItemStatsSystem.ItemUtilities), "SendToPlayer")]
-    public static class SendToPlayer_Patch
+    [HarmonyPatch(typeof(ItemStatsSystem.ItemAssetsCollection), "GetPrefab", new Type[] { typeof(int) })]
+    public static class GetPrefab_SafetyPatch
     {
         [HarmonyPostfix]
-        public static void Postfix(ItemStatsSystem.Item item)
+        public static void Postfix(int typeID, ItemStatsSystem.Item __result)
         {
-            // Check if the item is one of our trading cards
-            // This runs after the original method completes
-            Debug.Log($"[TradingCardMod] Item sent to player: {item.name}");
+            // Check if this TypeID is in our mod's range and wasn't found
+            if (typeID >= 100000 && __result == null)
+            {
+                Debug.LogWarning($"[TradingCardMod] Item TypeID {typeID} not found. Item was likely saved before mod loaded. It will be lost.");
+            }
         }
     }
-
-    /// <summary>
-    /// Example: Prefix patch that runs before a method.
-    /// Use case: Modify parameters, skip original method, validate inputs.
-    /// </summary>
-    [HarmonyPatch(typeof(SomeClass), "SomeMethod")]
-    public static class SomeMethod_Patch
-    {
-        [HarmonyPrefix]
-        public static bool Prefix(ref int someParameter)
-        {
-            // Modify parameter before original method runs
-            someParameter = someParameter * 2;
-
-            // Return true to run original method, false to skip it
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Example: Transpiler patch that modifies IL instructions.
-    /// Use case: Complex modifications, inserting code mid-method.
-    /// Note: Advanced technique - prefer Prefix/Postfix when possible.
-    /// </summary>
-    [HarmonyPatch(typeof(SomeClass), "SomeMethod")]
-    public static class SomeMethod_Transpiler
-    {
-        [HarmonyTranspiler]
-        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            // Modify and return the IL instructions
-            return instructions;
-        }
-    }
-    */
 }
