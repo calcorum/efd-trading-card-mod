@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>enable</Nullable>
+        <LangVersion>8.0</LangVersion>
+        <RootNamespace>TradingCardMod</RootNamespace>
+        <AssemblyName>TradingCardMod</AssemblyName>
+
+        <!-- Game installation path -->
+        <DuckovPath>/mnt/NV2/SteamLibrary/steamapps/common/Escape from Duckov</DuckovPath>
+
+        <SubPath>/Duckov_Data/Managed/</SubPath>
+
+        <!-- Steam Workshop path for mod dependencies -->
+        <WorkshopPath>/mnt/NV2/SteamLibrary/steamapps/workshop/content/3167020</WorkshopPath>
+
+        <!-- HarmonyLoadMod Workshop ID -->
+        <HarmonyModId>3589088839</HarmonyModId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Game DLL references -->
+        <Reference Include="$(DuckovPath)$(SubPath)TeamSoda.*"/>
+        <Reference Include="$(DuckovPath)$(SubPath)ItemStatsSystem.dll"/>
+        <Reference Include="$(DuckovPath)$(SubPath)Unity*"/>
+        <Reference Include="$(DuckovPath)$(SubPath)Duckov.dll"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Harmony library from HarmonyLoadMod (required dependency) -->
+        <Reference Include="$(WorkshopPath)/$(HarmonyModId)/0Harmony.dll"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Exclude non-code files from compilation -->
+        <None Include="CardSets/**/*" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="info.ini" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="preview.png" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://claude.ai/code/settings-schema.json",
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build*)",
+      "Bash(dotnet clean*)",
+      "Bash(dotnet restore*)"
+    ]
+  }
+}

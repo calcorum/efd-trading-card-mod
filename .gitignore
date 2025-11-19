@@ -1,0 +1,30 @@
+# Build outputs
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Claude Code private notes
+.claude/scratchpad/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+packages/
+
+# Debug logs
+*.log
+
+# Card set images (user-generated content)
+# Uncomment if you don't want to track example images
+# CardSets/*/images/
+
+# Preview image (generate your own)
+# preview.png
