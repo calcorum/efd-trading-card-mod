@@ -20,6 +20,22 @@ dotnet build TradingCardMod.csproj -c Release
 
 **Important**: Before building, update `DuckovPath` in `TradingCardMod.csproj` (line 10) to your actual game installation path.
 
+## Deployment
+
+```bash
+# Deploy to game (builds and copies all files)
+./deploy.sh
+
+# Deploy release build
+./deploy.sh --release
+
+# Remove mod from game
+./remove.sh
+
+# Remove with backup
+./remove.sh --backup
+```
+
 ## Testing
 
 ```bash
@@ -53,7 +69,13 @@ The game loads mods from `Duckov_Data/Mods/`. Each mod requires:
 
 - **`Patches`** (`src/Patches.cs`): Harmony patch definitions. Uses `HarmonyLib` for runtime method patching. Patches are applied in `Start()` and removed in `OnDestroy()`.
 
-- **`TradingCard`**: Data class representing card properties. Contains `GenerateTypeID()` for creating unique item IDs (100000+ range to avoid game conflicts).
+- **`TradingCard`** (`src/TradingCard.cs`): Data class representing card properties. Contains `GenerateTypeID()` for creating unique item IDs (100000+ range to avoid game conflicts).
+
+- **`CardParser`** (`src/CardParser.cs`): Parses card definition files. Pure C# with no Unity dependencies, fully unit tested.
+
+- **`ItemExtensions`** (`src/ItemExtensions.cs`): Reflection helpers for setting private fields on game objects.
+
+- **`TagHelper`** (`src/TagHelper.cs`): Utilities for working with game tags, including creating custom tags.
 
 ### Dependencies
 
@@ -92,48 +114,43 @@ Key namespaces and APIs from the game:
 
 ## Current Project Status
 
-**Phase:** 2 - Core Card Framework
+**Phase:** 2 Complete - Core Card Framework ✅
+**Next Phase:** 3 - Storage System (Binders)
 **Project Plan:** `.claude/scratchpad/PROJECT_PLAN.md`
 **Technical Analysis:** `.claude/scratchpad/item-system-analysis.md`
 
+### Completed Features
+
+- Cards load from `CardSets/*/cards.txt` files
+- Custom PNG images display as item icons
+- Cards register as game items with proper TypeIDs
+- Custom "TradingCard" tag for filtering
+- Debug spawn with F9 key (for testing)
+- Deploy/remove scripts for quick iteration
+
 ### Implementation Approach: Clone + Reflection
 
-Based on analysis of the AdditionalCollectibles mod, we're using a viable approach:
+Based on analysis of the AdditionalCollectibles mod:
 
-1. **Clone existing game items** as templates (not create from scratch)
+1. **Clone existing game items** as templates (base item ID 135)
 2. **Use reflection** to set private fields (typeID, weight, value, etc.)
 3. **Create custom tags** by cloning existing ScriptableObject tags
 4. **Load sprites** from user files in `CardSets/*/images/`
 
-Key patterns:
-```csharp
-// Clone base item
-Item original = ItemAssetsCollection.GetPrefab(135);
-GameObject clone = Object.Instantiate(original.gameObject);
-Object.DontDestroyOnLoad(clone);
-
-// Set properties via reflection
-item.SetPrivateField("typeID", newId);
-item.SetPrivateField("value", cardValue);
-
-// Get/create tags
-Tag tag = Resources.FindObjectsOfTypeAll<Tag>()
-    .FirstOrDefault(t => t.name == "Luxury");
-```
-
 ### Next Implementation Steps
 
-1. Create `src/ItemExtensions.cs` - reflection helper methods
-2. Create `src/TagHelper.cs` - tag operations
-3. Update `src/ModBehaviour.cs` - use clone+reflection approach
-4. Test card creation in-game
+Phase 3 - Storage System:
+1. Research existing storage items in game
+2. Create binder item with Inventory component
+3. Implement slot-based filtering for "TradingCard" tag
+4. Create card box variant with higher capacity
 
-### Files to Create
+### Log File Location
 
-| File | Purpose |
-|------|---------|
-| `src/ItemExtensions.cs` | `SetPrivateField()`, `GetPrivateField()` extensions |
-| `src/TagHelper.cs` | `GetTargetTag()`, `CreateOrCloneTag()` |
+Unity logs (for debugging):
+```
+/mnt/NV2/SteamLibrary/steamapps/compatdata/3167020/pfx/drive_c/users/steamuser/AppData/LocalLow/TeamSoda/Duckov/Player.log
+```
 
 ## Research References
 
