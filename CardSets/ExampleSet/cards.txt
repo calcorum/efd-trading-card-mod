@@ -1,20 +1,21 @@
 # Example Card Set - Trading Card Mod for Escape from Duckov
-# Format: CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value
+# Format: CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value | Description (optional)
 #
 # Fields:
-#   CardName   - Display name of the card
-#   SetName    - Name of the card collection
-#   SetNumber  - Number within the set (for sorting)
-#   ImageFile  - Filename of the card image (must be in images/ subfolder)
-#   Rarity     - Card rarity (Common, Uncommon, Rare, Ultra Rare)
-#   Weight     - Physical weight in game units
-#   Value      - In-game currency value
+#   CardName    - Display name of the card
+#   SetName     - Name of the card collection
+#   SetNumber   - Number within the set (for sorting)
+#   ImageFile   - Filename of the card image (must be in images/ subfolder)
+#   Rarity      - Card rarity. Valid values: Common, Uncommon, Rare, Very Rare, Ultra Rare, Legendary
+#   Weight      - Physical weight in game units
+#   Value       - In-game currency value
+#   Description - (Optional) Custom tooltip text. If omitted, auto-generates as "SetName #SetNumber - Rarity"
 #
 # Add your own cards below! Just follow the format above.
 # Place corresponding images in the images/ subfolder.
 
-Duck Hero | Example Set | 001 | duck_hero.png | Rare | 0.01 | 100
-Golden Quacker | Example Set | 002 | golden_quacker.png | Ultra Rare | 0.01 | 500
+Duck Hero | Example Set | 001 | duck_hero.png | Rare | 0.01 | 100 | The brave defender of all ponds
+Golden Quacker | Example Set | 002 | golden_quacker.png | Ultra Rare | 0.01 | 500 | A legendary duck made of pure gold
 Pond Guardian | Example Set | 003 | pond_guardian.png | Uncommon | 0.01 | 25
 Bread Seeker | Example Set | 004 | bread_seeker.png | Common | 0.01 | 10
-Feathered Fury | Example Set | 005 | feathered_fury.png | Rare | 0.01 | 75
+Feathered Fury | Example Set | 005 | feathered_fury.png | Rare | 0.01 | 75 | Known for its fierce battle cry

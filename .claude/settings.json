@@ -4,7 +4,8 @@
     "allow": [
       "Bash(dotnet build*)",
       "Bash(dotnet clean*)",
-      "Bash(dotnet restore*)"
+      "Bash(dotnet restore*)",
+      "WebFetch(domain:code.claude.com)"
     ]
   }
 }

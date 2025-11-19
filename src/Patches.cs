@@ -43,7 +43,7 @@ namespace TradingCardMod
         {
             try
             {
-                _harmony?.UnpatchSelf();
+                _harmony?.UnpatchAll(HarmonyId);
                 Debug.Log($"[TradingCardMod] Harmony patches removed");
             }
             catch (Exception ex)

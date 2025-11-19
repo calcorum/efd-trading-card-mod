@@ -20,10 +20,30 @@
 
     <ItemGroup>
         <!-- Game DLL references -->
-        <Reference Include="$(DuckovPath)$(SubPath)TeamSoda.*"/>
-        <Reference Include="$(DuckovPath)$(SubPath)ItemStatsSystem.dll"/>
-        <Reference Include="$(DuckovPath)$(SubPath)Unity*"/>
-        <Reference Include="$(DuckovPath)$(SubPath)Duckov.dll"/>
+        <Reference Include="TeamSoda.Duckov.Core">
+            <HintPath>$(DuckovPath)$(SubPath)TeamSoda.Duckov.Core.dll</HintPath>
+        </Reference>
+        <Reference Include="TeamSoda.Duckov.Utilities">
+            <HintPath>$(DuckovPath)$(SubPath)TeamSoda.Duckov.Utilities.dll</HintPath>
+        </Reference>
+        <Reference Include="TeamSoda.MiniLocalizor">
+            <HintPath>$(DuckovPath)$(SubPath)TeamSoda.MiniLocalizor.dll</HintPath>
+        </Reference>
+        <Reference Include="SodaLocalization">
+            <HintPath>$(DuckovPath)$(SubPath)SodaLocalization.dll</HintPath>
+        </Reference>
+        <Reference Include="ItemStatsSystem">
+            <HintPath>$(DuckovPath)$(SubPath)ItemStatsSystem.dll</HintPath>
+        </Reference>
+        <Reference Include="Duckov">
+            <HintPath>$(DuckovPath)$(SubPath)Duckov.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>$(DuckovPath)$(SubPath)UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(DuckovPath)$(SubPath)UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>
@@ -35,6 +55,6 @@
         <!-- Exclude non-code files from compilation -->
         <None Include="CardSets/**/*" CopyToOutputDirectory="PreserveNewest" />
         <None Include="info.ini" CopyToOutputDirectory="PreserveNewest" />
-        <None Include="preview.png" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="preview.png" CopyToOutputDirectory="PreserveNewest" Condition="Exists('preview.png')" />
     </ItemGroup>
 </Project>

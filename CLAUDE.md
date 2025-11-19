@@ -10,15 +10,33 @@ A Unity mod for Escape from Duckov that adds a customizable trading card system 
 
 ```bash
 # Build the mod
-dotnet build
+dotnet build TradingCardMod.csproj
 
 # Build release version
-dotnet build -c Release
+dotnet build TradingCardMod.csproj -c Release
 
 # Output location: bin/Debug/netstandard2.1/TradingCardMod.dll
 ```
 
 **Important**: Before building, update `DuckovPath` in `TradingCardMod.csproj` (line 10) to your actual game installation path.
+
+## Testing
+
+```bash
+# Run all unit tests
+dotnet test TradingCardMod.Tests.csproj
+
+# Run tests with verbose output
+dotnet test TradingCardMod.Tests.csproj --verbosity normal
+
+# Run specific test class
+dotnet test TradingCardMod.Tests.csproj --filter "FullyQualifiedName~CardParserTests"
+
+# Run single test
+dotnet test TradingCardMod.Tests.csproj --filter "ParseLine_ValidLineWithoutDescription_ReturnsCard"
+```
+
+**Test Coverage:** Parsing logic, validation, rarity mapping, TypeID generation, and description auto-generation are all tested. Unity-dependent code (item creation, tags) cannot be unit tested.
 
 ## Architecture
 
@@ -72,9 +90,53 @@ Key namespaces and APIs from the game:
 3. Launch game and enable mod in Mods menu
 4. Check game logs for `[TradingCardMod]` messages
 
-## TODO Items in Code
+## Current Project Status
 
-The following features need implementation (marked with TODO comments):
-- `RegisterCardWithGame()` - Create Unity prefabs and register with ItemAssetsCollection
-- Item cleanup in `OnDestroy()` - Remove registered items on mod unload
-- `TradingCard.ItemPrefab` property - Store Unity prefab reference
+**Phase:** 2 - Core Card Framework
+**Project Plan:** `.claude/scratchpad/PROJECT_PLAN.md`
+**Technical Analysis:** `.claude/scratchpad/item-system-analysis.md`
+
+### Implementation Approach: Clone + Reflection
+
+Based on analysis of the AdditionalCollectibles mod, we're using a viable approach:
+
+1. **Clone existing game items** as templates (not create from scratch)
+2. **Use reflection** to set private fields (typeID, weight, value, etc.)
+3. **Create custom tags** by cloning existing ScriptableObject tags
+4. **Load sprites** from user files in `CardSets/*/images/`
+
+Key patterns:
+```csharp
+// Clone base item
+Item original = ItemAssetsCollection.GetPrefab(135);
+GameObject clone = Object.Instantiate(original.gameObject);
+Object.DontDestroyOnLoad(clone);
+
+// Set properties via reflection
+item.SetPrivateField("typeID", newId);
+item.SetPrivateField("value", cardValue);
+
+// Get/create tags
+Tag tag = Resources.FindObjectsOfTypeAll<Tag>()
+    .FirstOrDefault(t => t.name == "Luxury");
+```
+
+### Next Implementation Steps
+
+1. Create `src/ItemExtensions.cs` - reflection helper methods
+2. Create `src/TagHelper.cs` - tag operations
+3. Update `src/ModBehaviour.cs` - use clone+reflection approach
+4. Test card creation in-game
+
+### Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/ItemExtensions.cs` | `SetPrivateField()`, `GetPrivateField()` extensions |
+| `src/TagHelper.cs` | `GetTargetTag()`, `CreateOrCloneTag()` |
+
+## Research References
+
+- **Decompiled game code:** `.claude/scratchpad/decompiled/`
+- **Item system analysis:** `.claude/scratchpad/item-system-analysis.md`
+- **AdditionalCollectibles mod:** Workshop ID 3591453758 (reference implementation)
