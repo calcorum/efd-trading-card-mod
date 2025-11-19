@@ -44,6 +44,12 @@
         <Reference Include="UnityEngine.CoreModule">
             <HintPath>$(DuckovPath)$(SubPath)UnityEngine.CoreModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.ImageConversionModule">
+            <HintPath>$(DuckovPath)$(SubPath)UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.InputLegacyModule">
+            <HintPath>$(DuckovPath)$(SubPath)UnityEngine.InputLegacyModule.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>
@@ -56,5 +62,10 @@
         <None Include="CardSets/**/*" CopyToOutputDirectory="PreserveNewest" />
         <None Include="info.ini" CopyToOutputDirectory="PreserveNewest" />
         <None Include="preview.png" CopyToOutputDirectory="PreserveNewest" Condition="Exists('preview.png')" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Exclude test files from main build (they're in the test project) -->
+        <Compile Remove="tests/**/*.cs" />
     </ItemGroup>
 </Project>
