@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using ItemStatsSystem;
 using SodaCraft.Localizations;
+using Duckov.Modding;
 using Duckov.Utilities;
 
 namespace TradingCardMod
@@ -16,6 +17,11 @@ namespace TradingCardMod
     {
         private static ModBehaviour? _instance;
         public static ModBehaviour Instance => _instance!;
+
+        /// <summary>
+        /// Mod name for ModConfig integration.
+        /// </summary>
+        public const string MOD_NAME = "TradingCardMod";
 
         /// <summary>
         /// Gets the list of registered card items (for loot injection).
@@ -126,6 +132,114 @@ namespace TradingCardMod
                 Debug.LogError($"[TradingCardMod] Failed to load card sets: {ex.Message}");
                 Debug.LogException(ex);
             }
+        }
+
+        /// <summary>
+        /// Called when the mod is enabled. Set up ModConfig integration.
+        /// </summary>
+        void OnEnable()
+        {
+            ModManager.OnModActivated += OnModActivated;
+
+            // Check if ModConfig is already loaded
+            if (ModConfigAPI.IsAvailable())
+            {
+                Debug.Log("[TradingCardMod] ModConfig already available");
+                SetupModConfig();
+            }
+        }
+
+        /// <summary>
+        /// Called when another mod is activated.
+        /// </summary>
+        private void OnModActivated(ModInfo info, Duckov.Modding.ModBehaviour behaviour)
+        {
+            if (info.name == ModConfigAPI.ModConfigName)
+            {
+                Debug.Log("[TradingCardMod] ModConfig activated");
+                SetupModConfig();
+            }
+        }
+
+        /// <summary>
+        /// Called when the mod is disabled. Clean up ModConfig subscriptions.
+        /// </summary>
+        void OnDisable()
+        {
+            ModManager.OnModActivated -= OnModActivated;
+        }
+
+        /// <summary>
+        /// Set up ModConfig to display loaded card sets information.
+        /// Uses dropdowns with single options to create read-only displays.
+        /// </summary>
+        private void SetupModConfig()
+        {
+            if (!ModConfigAPI.IsAvailable())
+            {
+                return;
+            }
+
+            // Build info string showing loaded card sets
+            var setInfo = new List<string>();
+            foreach (var setEntry in _cardsBySet)
+            {
+                setInfo.Add($"{setEntry.Key}: {setEntry.Value.Count} cards");
+            }
+
+            string loadedSetsInfo = setInfo.Count > 0
+                ? string.Join(", ", setInfo)
+                : "No card sets loaded";
+
+            // Use dropdowns with single options to create read-only displays
+            // Total cards display
+            var cardsOption = new System.Collections.Generic.SortedDictionary<string, object>
+            {
+                { $"{_loadedCards.Count} cards", _loadedCards.Count }
+            };
+            ModConfigAPI.SafeAddDropdownList(
+                MOD_NAME,
+                "TotalCards",
+                "Total Cards Loaded",
+                cardsOption,
+                typeof(int),
+                _loadedCards.Count
+            );
+
+            // Total packs display
+            var packsOption = new System.Collections.Generic.SortedDictionary<string, object>
+            {
+                { $"{_registeredPacks.Count} packs", _registeredPacks.Count }
+            };
+            ModConfigAPI.SafeAddDropdownList(
+                MOD_NAME,
+                "TotalPacks",
+                "Total Packs Loaded",
+                packsOption,
+                typeof(int),
+                _registeredPacks.Count
+            );
+
+            // Card sets info - one entry per set for clarity
+            int setIndex = 0;
+            foreach (var setEntry in _cardsBySet)
+            {
+                var setOption = new System.Collections.Generic.SortedDictionary<string, object>
+                {
+                    { $"{setEntry.Value.Count} cards", setEntry.Value.Count }
+                };
+                ModConfigAPI.SafeAddDropdownList(
+                    MOD_NAME,
+                    $"Set_{setIndex}",
+                    $"Set: {setEntry.Key}",
+                    setOption,
+                    typeof(int),
+                    setEntry.Value.Count
+                );
+                setIndex++;
+            }
+
+            Debug.Log("[TradingCardMod] ModConfig setup completed");
         }
 
         /// <summary>
