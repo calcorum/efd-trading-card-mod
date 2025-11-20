@@ -74,4 +74,7 @@ namespace TradingCardMod
             }
         }
     }
+
+    // Search injection patch disabled - causing index errors
+    // TODO: Find better approach for loot table integration
 }

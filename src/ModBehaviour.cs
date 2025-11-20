@@ -17,6 +17,42 @@ namespace TradingCardMod
         private static ModBehaviour? _instance;
         public static ModBehaviour Instance => _instance!;
 
+        /// <summary>
+        /// Gets the list of registered card items (for loot injection).
+        /// </summary>
+        public List<Item> GetRegisteredItems() => _registeredItems;
+
+        /// <summary>
+        /// Gets cards for a specific set (used by PackUsageBehavior).
+        /// </summary>
+        public List<TradingCard> GetCardsBySet(string setName)
+        {
+            if (_cardsBySet.TryGetValue(setName, out var cards))
+            {
+                return cards;
+            }
+            return new List<TradingCard>();
+        }
+
+        /// <summary>
+        /// Gets the card name to TypeID mapping (used by PackUsageBehavior).
+        /// </summary>
+        public Dictionary<string, int> GetCardTypeIds() => _cardNameToTypeId;
+
+        /// <summary>
+        /// Gets slot configuration for a specific pack (used by PackUsageBehavior).
+        /// </summary>
+        public List<PackSlot> GetPackSlots(string setName, string packName)
+        {
+            string key = $"{setName}|{packName}";
+            if (_packDefinitions.TryGetValue(key, out var pack))
+            {
+                return pack.Slots;
+            }
+            Debug.LogWarning($"[TradingCardMod] Pack definition not found: {key}");
+            return new List<PackSlot>();
+        }
+
         // Base game item ID to clone (135 is commonly used for collectibles)
         private const int BASE_ITEM_ID = 135;
 
@@ -31,6 +67,14 @@ namespace TradingCardMod
         private Tag? _tradingCardTag;
         private Item? _binderItem;
         private Item? _cardBoxItem;
+
+        // Track cards and IDs per set for pack creation
+        private Dictionary<string, List<TradingCard>> _cardsBySet = new Dictionary<string, List<TradingCard>>();
+        private Dictionary<string, int> _cardNameToTypeId = new Dictionary<string, int>();
+        private List<Item> _registeredPacks = new List<Item>();
+
+        // Store pack definitions for runtime lookup (key = "SetName|PackName")
+        private Dictionary<string, CardPack> _packDefinitions = new Dictionary<string, CardPack>();
 
         // Debug: track spawn cycling
         private int _debugSpawnIndex = 0;
@@ -54,6 +98,9 @@ namespace TradingCardMod
 
             try
             {
+                // Log all available tags for reference
+                TagHelper.LogAvailableTags();
+
                 // Create our custom tag first
                 _tradingCardTag = TagHelper.GetOrCreateTradingCardTag();
 
@@ -63,10 +110,14 @@ namespace TradingCardMod
                 // Create storage items
                 CreateStorageItems();
 
-                // Build spawnable items list (cards + storage)
+                // Create card packs
+                CreateCardPacks();
+
+                // Build spawnable items list (cards + storage + packs)
                 _allSpawnableItems.AddRange(_registeredItems);
                 if (_binderItem != null) _allSpawnableItems.Add(_binderItem);
                 if (_cardBoxItem != null) _allSpawnableItems.Add(_cardBoxItem);
+                _allSpawnableItems.AddRange(_registeredPacks);
 
                 Debug.Log("[TradingCardMod] Mod initialized successfully!");
             }
@@ -102,6 +153,34 @@ namespace TradingCardMod
             Debug.Log($"[TradingCardMod] Total cards loaded: {_loadedCards.Count}");
             Debug.Log($"[TradingCardMod] Total items registered: {_registeredItems.Count}");
             Debug.Log("[TradingCardMod] DEBUG: Press F9 to spawn items (cycles through cards, then binder, then box)");
+
+            // Clear the search cache so our items can be found
+            ClearSearchCache();
+        }
+
+        /// <summary>
+        /// Clears the ItemAssetsCollection search cache so dynamically registered items can be found.
+        /// </summary>
+        private void ClearSearchCache()
+        {
+            try
+            {
+                var cacheField = typeof(ItemAssetsCollection).GetField("cachedSearchResults",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+                if (cacheField != null)
+                {
+                    var cache = cacheField.GetValue(null) as System.Collections.IDictionary;
+                    if (cache != null)
+                    {
+                        cache.Clear();
+                        Debug.Log("[TradingCardMod] Cleared search cache for loot table integration");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[TradingCardMod] Could not clear search cache: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -139,6 +218,61 @@ namespace TradingCardMod
         }
 
         /// <summary>
+        /// Creates card packs for each loaded card set.
+        /// </summary>
+        private void CreateCardPacks()
+        {
+            foreach (var setEntry in _cardsBySet)
+            {
+                string setName = setEntry.Key;
+                var cards = setEntry.Value;
+
+                if (cards.Count == 0)
+                {
+                    Debug.LogWarning($"[TradingCardMod] No cards in set {setName}, skipping pack creation");
+                    continue;
+                }
+
+                // Create default pack for this set
+                string setDirectory = Path.Combine(_modPath, "CardSets", setName);
+                string imagesDirectory = Path.Combine(setDirectory, "images");
+
+                CardPack defaultPack = PackParser.CreateDefaultPack(setName, imagesDirectory);
+
+                // Check for user-defined packs
+                string packsFile = Path.Combine(setDirectory, "packs.txt");
+                var userPacks = PackParser.ParseFile(packsFile, setName, imagesDirectory);
+
+                // Create all packs
+                var allPacks = new List<CardPack> { defaultPack };
+                allPacks.AddRange(userPacks);
+
+                foreach (var pack in allPacks)
+                {
+                    // Store pack definition for runtime lookup
+                    string packKey = $"{pack.SetName}|{pack.PackName}";
+                    _packDefinitions[packKey] = pack;
+
+                    // Load pack icon
+                    Sprite? packIcon = null;
+                    if (File.Exists(pack.ImagePath))
+                    {
+                        packIcon = LoadSpriteFromFile(pack.ImagePath, pack.GenerateTypeID());
+                    }
+
+                    // Create pack item
+                    Item? packItem = PackHelper.CreatePackItem(pack, packIcon);
+                    if (packItem != null)
+                    {
+                        _registeredPacks.Add(packItem);
+                    }
+                }
+            }
+
+            Debug.Log($"[TradingCardMod] Created {_registeredPacks.Count} card packs");
+        }
+
+        /// <summary>
         /// Update is called every frame. Used for debug input handling.
         /// </summary>
         void Update()
@@ -162,14 +296,23 @@ namespace TradingCardMod
             }
 
             // Cycle through all spawnable items
-            Item itemToSpawn = _allSpawnableItems[_debugSpawnIndex % _allSpawnableItems.Count];
+            Item prefab = _allSpawnableItems[_debugSpawnIndex % _allSpawnableItems.Count];
             _debugSpawnIndex++;
 
             try
             {
-                // Use game's utility to give item to player
-                ItemUtilities.SendToPlayer(itemToSpawn);
-                Debug.Log($"[TradingCardMod] Spawned: {itemToSpawn.DisplayName} (ID: {itemToSpawn.TypeID})");
+                // Instantiate a fresh copy of the item (don't send prefab directly)
+                Item instance = ItemAssetsCollection.InstantiateSync(prefab.TypeID);
+                if (instance != null)
+                {
+                    // Use game's utility to give item to player
+                    ItemUtilities.SendToPlayer(instance);
+                    Debug.Log($"[TradingCardMod] Spawned: {instance.DisplayName} (ID: {instance.TypeID})");
+                }
+                else
+                {
+                    Debug.LogError($"[TradingCardMod] Failed to instantiate {prefab.DisplayName} (ID: {prefab.TypeID})");
+                }
             }
             catch (Exception ex)
             {
@@ -200,6 +343,12 @@ namespace TradingCardMod
                 string imagesDirectory = Path.Combine(setDirectory, "images");
                 var cards = CardParser.ParseFile(cardsFile, imagesDirectory);
 
+                // Initialize set tracking
+                if (!_cardsBySet.ContainsKey(setName))
+                {
+                    _cardsBySet[setName] = new List<TradingCard>();
+                }
+
                 foreach (var card in cards)
                 {
                     // Validate card
@@ -214,6 +363,7 @@ namespace TradingCardMod
                     }
 
                     _loadedCards.Add(card);
+                    _cardsBySet[setName].Add(card);
 
                     // Register card as game item
                     RegisterCardWithGame(card);
@@ -261,11 +411,13 @@ namespace TradingCardMod
 
                 item.SetPrivateField("typeID", typeId);
                 item.SetPrivateField("weight", card.Weight);
-                item.SetPrivateField("value", card.Value);
                 item.SetPrivateField("displayName", locKey);
-                item.SetPrivateField("quality", card.GetQuality());
                 item.SetPrivateField("order", 0);
                 item.SetPrivateField("maxStackCount", 1);
+
+                // Use public setters for properties that have them
+                item.Value = card.Value;
+                item.Quality = card.GetQuality();
 
                 // Set display quality based on rarity
                 SetDisplayQuality(item, card.GetQuality());
@@ -279,6 +431,25 @@ namespace TradingCardMod
                 {
                     item.Tags.Add(luxuryTag);
                 }
+
+                // ============================================================
+                // TODO: REMOVE BEFORE RELEASE - TEST TAGS FOR LOOT SPAWNING
+                // These tags make cards appear frequently in loot for testing.
+                // Replace with appropriate tags (Collection, Misc, etc.) or
+                // implement proper loot table integration before shipping.
+                // ============================================================
+                Tag? medicTag = TagHelper.GetTargetTag("Medic");
+                if (medicTag != null)
+                {
+                    item.Tags.Add(medicTag);
+                }
+
+                Tag? toolTag = TagHelper.GetTargetTag("Tool");
+                if (toolTag != null)
+                {
+                    item.Tags.Add(toolTag);
+                }
+                // ============================================================
 
                 // Add our custom TradingCard tag
                 if (_tradingCardTag != null)
@@ -305,6 +476,7 @@ namespace TradingCardMod
                 if (ItemAssetsCollection.AddDynamicEntry(item))
                 {
                     _registeredItems.Add(item);
+                    _cardNameToTypeId[card.CardName] = typeId;
                     Debug.Log($"[TradingCardMod] Registered: {card.CardName} (ID: {typeId})");
                 }
                 else
@@ -440,10 +612,17 @@ namespace TradingCardMod
             // Clean up storage items
             StorageHelper.Cleanup();
 
+            // Clean up packs
+            PackHelper.Cleanup();
+
             // Clean up tags
             TagHelper.Cleanup();
 
             _loadedCards.Clear();
+            _cardsBySet.Clear();
+            _cardNameToTypeId.Clear();
+            _registeredPacks.Clear();
+            _packDefinitions.Clear();
             _allSpawnableItems.Clear();
 
             Debug.Log("[TradingCardMod] Cleanup complete.");
