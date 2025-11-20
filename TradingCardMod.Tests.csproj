@@ -28,6 +28,8 @@
         <!-- Reference the main project's testable code -->
         <Compile Include="src/CardParser.cs" Link="CardParser.cs" />
         <Compile Include="src/TradingCard.cs" Link="TradingCard.cs" />
+        <Compile Include="src/CardPack.cs" Link="CardPack.cs" />
+        <Compile Include="src/PackParser.cs" Link="PackParser.cs" />
     </ItemGroup>
 
 </Project>
