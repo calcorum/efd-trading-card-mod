@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy Trading Card Mod to Escape from Duckov
-# Usage: ./deploy.sh [--release]
+# Usage: ./deploy.sh [--release] [--no-example]
 
 set -e
 
@@ -9,11 +9,20 @@ GAME_PATH="/mnt/NV2/SteamLibrary/steamapps/common/Escape from Duckov"
 MOD_NAME="TradingCardMod"
 MOD_DIR="$GAME_PATH/Duckov_Data/Mods/$MOD_NAME"
 
-# Build configuration
+# Parse arguments
 BUILD_CONFIG="Debug"
-if [[ "$1" == "--release" ]]; then
-    BUILD_CONFIG="Release"
-fi
+EXCLUDE_EXAMPLE=false
+
+for arg in "$@"; do
+    case $arg in
+        --release)
+            BUILD_CONFIG="Release"
+            ;;
+        --no-example)
+            EXCLUDE_EXAMPLE=true
+            ;;
+    esac
+done
 
 echo "=== Trading Card Mod Deployment ==="
 echo "Build config: $BUILD_CONFIG"
@@ -47,7 +56,18 @@ fi
 # Copy card sets
 echo "[4/4] Copying card sets..."
 if [[ -d "CardSets" ]]; then
-    cp -r CardSets/* "$MOD_DIR/CardSets/" 2>/dev/null || true
+    for set_dir in CardSets/*/; do
+        set_name=$(basename "$set_dir")
+
+        # Skip ExampleSet if --no-example flag is set
+        if [[ "$EXCLUDE_EXAMPLE" == true && "$set_name" == "ExampleSet" ]]; then
+            echo "      Skipping: $set_name (--no-example)"
+            continue
+        fi
+
+        cp -r "$set_dir" "$MOD_DIR/CardSets/"
+        echo "      Copied: $set_name"
+    done
 fi
 
 echo ""

@@ -666,10 +666,33 @@ namespace TradingCardMod
                 texture.filterMode = FilterMode.Bilinear;
                 texture.Apply();
 
+                // Pad to square if rectangular (game preview expects square icons)
+                Texture2D finalTexture = texture;
+                if (texture.width != texture.height)
+                {
+                    int size = Mathf.Max(texture.width, texture.height);
+                    finalTexture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+
+                    // Fill with transparent pixels
+                    Color[] clearPixels = new Color[size * size];
+                    for (int i = 0; i < clearPixels.Length; i++)
+                    {
+                        clearPixels[i] = Color.clear;
+                    }
+                    finalTexture.SetPixels(clearPixels);
+
+                    // Center the original image
+                    int offsetX = (size - texture.width) / 2;
+                    int offsetY = (size - texture.height) / 2;
+                    finalTexture.SetPixels(offsetX, offsetY, texture.width, texture.height, texture.GetPixels());
+                    finalTexture.filterMode = FilterMode.Bilinear;
+                    finalTexture.Apply();
+                }
+
                 // Create sprite from texture
                 Sprite sprite = Sprite.Create(
-                    texture,
-                    new Rect(0f, 0f, texture.width, texture.height),
+                    finalTexture,
+                    new Rect(0f, 0f, finalTexture.width, finalTexture.height),
                     new Vector2(0.5f, 0.5f),
                     100f
                 );
@@ -681,7 +704,7 @@ namespace TradingCardMod
 
                 // Store references on the holder to prevent GC
                 var resourceHolder = holder.AddComponent<CardResourceHolder>();
-                resourceHolder.Texture = texture;
+                resourceHolder.Texture = finalTexture;
                 resourceHolder.Sprite = sprite;
 
                 return sprite;
