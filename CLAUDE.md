@@ -77,16 +77,24 @@ The game loads mods from `Duckov_Data/Mods/`. Each mod requires:
 
 - **`TagHelper`** (`src/TagHelper.cs`): Utilities for working with game tags, including creating custom tags.
 
+- **`PackUsageBehavior`** (`src/PackUsageBehavior.cs`): Handles card pack opening mechanics. Implements gacha-style random card distribution based on rarity weights.
+
+- **`ModConfigApi`** (`src/ModConfigApi.cs`): Optional integration with ModConfig mod. Adds card set information (set name, card number, rarity) to item descriptions in inventory.
+
 ### Dependencies
 
 - **HarmonyLoadMod** (Workshop ID: 3589088839): Required mod dependency providing Harmony 2.4.1. Referenced at build time but not bundled to avoid version conflicts.
+
+- **ModConfig** (Workshop ID: 3592433938): Optional mod dependency. When installed, enhances card descriptions with set information in the inventory UI.
 
 ### Card Definition Format
 
 Cards are defined in `CardSets/{SetName}/cards.txt` using pipe-separated values:
 ```
-CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value
+CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value | Description (optional)
 ```
+
+The Description field is optional. If provided, it will be displayed in the item's in-game description/tooltip.
 
 Images go in `CardSets/{SetName}/images/`.
 
@@ -114,19 +122,23 @@ Key namespaces and APIs from the game:
 
 ## Current Project Status
 
-**Phase:** 2 Complete - Core Card Framework ✅
-**Next Phase:** 3 - Storage System (Binders)
+**Phase:** 3 Complete - Storage & Pack System ✅
+**Status:** Ready for first release candidate
 **Project Plan:** `.claude/scratchpad/PROJECT_PLAN.md`
 **Technical Analysis:** `.claude/scratchpad/item-system-analysis.md`
 
 ### Completed Features
 
-- Cards load from `CardSets/*/cards.txt` files
+- Cards load from `CardSets/*/cards.txt` files with optional descriptions
 - Custom PNG images display as item icons
 - Cards register as game items with proper TypeIDs
 - Custom "TradingCard" tag for filtering
+- Card packs with gacha-style mechanics (weighted random distribution)
+- Storage system with slot-based filtering (9-slot binders, 18-slot boxes)
+- ModConfig integration for enhanced card info display (set name, number, rarity)
 - Debug spawn with F9 key (for testing)
 - Deploy/remove scripts for quick iteration
+- Unit tests for parsing logic and pack system
 
 ### Implementation Approach: Clone + Reflection
 
@@ -136,14 +148,13 @@ Based on analysis of the AdditionalCollectibles mod:
 2. **Use reflection** to set private fields (typeID, weight, value, etc.)
 3. **Create custom tags** by cloning existing ScriptableObject tags
 4. **Load sprites** from user files in `CardSets/*/images/`
+5. **Attach custom behaviors** for pack opening mechanics
 
-### Next Implementation Steps
+### Future Considerations
 
-Phase 3 - Storage System:
-1. Research existing storage items in game
-2. Create binder item with Inventory component
-3. Implement slot-based filtering for "TradingCard" tag
-4. Create card box variant with higher capacity
+- Investigate new ItemBuilder API (added in recent game update) as potential replacement for reflection-based approach
+- Additional storage variants or customization options
+- Binder sheets which hold cards are are held by binders
 
 ### Log File Location
 

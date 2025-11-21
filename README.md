@@ -2,6 +2,15 @@
 
 A customizable trading card system that lets you add your own card sets to the game.
 
+## Features
+
+- **Custom Card Sets** - Create your own trading cards with custom artwork and stats
+- **Card Packs** - Open randomized card packs with gacha-style rarity distribution
+- **Storage System** - Organize your collection with 9-slot binders and 18-slot card boxes
+- **User-Friendly Format** - Define cards using simple pipe-separated text files
+- **ModConfig Integration** - Enhanced card info display when ModConfig is installed (optional)
+- **No Programming Required** - Add new card sets without writing any code
+
 ## Requirements
 
 **Required Mod Dependency:**
@@ -9,12 +18,18 @@ A customizable trading card system that lets you add your own card sets to the g
 
 This mod requires the HarmonyLoadMod to be installed. It provides the Harmony library that many mods share to avoid version conflicts.
 
+**Optional Mod Dependency:**
+- [ModConfig](https://steamcommunity.com/sharedfiles/filedetails/?id=3592433938) - Subscribe on Steam Workshop
+
+ModConfig is optional but recommended. When installed, it adds card set information (set name, card number, rarity) to the item description in your inventory, making it easier to identify and organize your cards.
+
 ## Installation
 
 1. Subscribe to [HarmonyLib](https://steamcommunity.com/sharedfiles/filedetails/?id=3589088839) on Steam Workshop
-2. Build the mod (see Development section)
-3. Copy the `TradingCardMod` folder to your game's `Duckov_Data/Mods` directory
-4. Launch the game and enable both HarmonyLib and this mod in the Mods menu
+2. (Optional) Subscribe to [ModConfig](https://steamcommunity.com/sharedfiles/filedetails/?id=3592433938) for enhanced card descriptions
+3. Build the mod (see Development section)
+4. Copy the `TradingCardMod` folder to your game's `Duckov_Data/Mods` directory
+5. Launch the game and enable the mods in the Mods menu (HarmonyLib is required, ModConfig is optional)
 
 ## Adding Card Sets
 
@@ -29,13 +44,13 @@ This mod requires the HarmonyLoadMod to be installed. It provides the Harmony li
 Cards are defined in `cards.txt` using pipe-separated values:
 
 ```
-CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value
+CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value | Description (optional)
 ```
 
 Example:
 ```
-Blue Dragon | Fantasy Set | 001 | blue_dragon.png | Ultra Rare | 0.01 | 500
-Fire Sprite | Fantasy Set | 002 | fire_sprite.png | Rare | 0.01 | 100
+Blue Dragon | Fantasy Set | 001 | blue_dragon.png | Ultra Rare | 0.05 | 500| A majestic dragon with scales of sapphire blue.
+Fire Sprite | Fantasy Set | 002 | fire_sprite.png | Rare | 0.05 | 100
 ```
 
 ### Field Descriptions
@@ -47,14 +62,14 @@ Fire Sprite | Fantasy Set | 002 | fire_sprite.png | Rare | 0.01 | 100
 | SetNumber | Number for sorting (as integer) | 001 |
 | ImageFile | Image filename in images/ folder | "blue_dragon.png" |
 | Rarity | Card rarity tier | Common, Uncommon, Rare, Ultra Rare |
-| Weight | Physical weight in game units | 0.01 |
+| Weight | Physical weight in game units | 0.05 |
 | Value | In-game currency value | 500 |
+| Description | Optional flavor text for the card | "A majestic dragon..." |
 
 ### Image Requirements
 
-- Place images in your card set's `images/` subfolder
+- Place images in your cardset's `images/` subfolder
 - Recommended format: PNG
-- Recommended size: 256x256 or similar aspect ratio
 
 ### Comments
 
@@ -133,4 +148,4 @@ This mod is provided as-is for personal use. Do not distribute copyrighted card 
 
 ## Credits
 
-Built using the official Duckov modding framework.
+Built using the official Duckov modding framework and building on the awesome work of the AdditionalCollectibles mod.

@@ -314,8 +314,8 @@ namespace TradingCardMod
                 "Card Binder",
                 "A binder for storing and organizing trading cards. Holds 9 cards.",
                 9,
-                0.5f,  // weight
-                500,   // value
+                1.5f,  // weight
+                7500,   // value
                 _tradingCardTag
             );
 
@@ -326,7 +326,7 @@ namespace TradingCardMod
                 "A large box for bulk storage of trading cards. Holds 36 cards.",
                 36,
                 2.0f,  // weight
-                1500,  // value
+                37500,  // value
                 _tradingCardTag
             );
         }
@@ -539,29 +539,22 @@ namespace TradingCardMod
                 // Set tags
                 item.Tags.Clear();
 
-                // Add Luxury tag (for selling at shops)
                 Tag? luxuryTag = TagHelper.GetTargetTag("Luxury");
                 if (luxuryTag != null)
                 {
                     item.Tags.Add(luxuryTag);
                 }
 
-                // ============================================================
-                // TODO: REMOVE BEFORE RELEASE - TEST TAGS FOR LOOT SPAWNING
-                // These tags make cards appear frequently in loot for testing.
-                // Replace with appropriate tags (Collection, Misc, etc.) or
-                // implement proper loot table integration before shipping.
-                // ============================================================
-                Tag? medicTag = TagHelper.GetTargetTag("Medic");
-                if (medicTag != null)
+                Tag? miscTag = TagHelper.GetTargetTag("Misc");
+                if (miscTag != null)
                 {
-                    item.Tags.Add(medicTag);
+                    item.Tags.Add(miscTag);
                 }
 
-                Tag? toolTag = TagHelper.GetTargetTag("Tool");
-                if (toolTag != null)
+                Tag? collTag = TagHelper.GetTargetTag("Collection");
+                if (collTag != null)
                 {
-                    item.Tags.Add(toolTag);
+                    item.Tags.Add(collTag);
                 }
                 // ============================================================
 
