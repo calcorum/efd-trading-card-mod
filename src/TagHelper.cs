@@ -93,6 +93,16 @@ namespace TradingCardMod
         }
 
         /// <summary>
+        /// Gets the "CardBinderContent" tag, creating it if it doesn't exist.
+        /// This is a parent tag shared by both cards and binder sheets, allowing both to be stored in card binders.
+        /// </summary>
+        /// <returns>The CardBinderContent tag.</returns>
+        public static Tag GetOrCreateCardBinderContentTag()
+        {
+            return CreateOrCloneTag("CardBinderContent", "Card Binder Content");
+        }
+
+        /// <summary>
         /// Gets all tags created by this mod.
         /// </summary>
         /// <returns>List of tags created by the mod.</returns>

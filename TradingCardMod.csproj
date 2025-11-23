@@ -50,6 +50,9 @@
         <Reference Include="UnityEngine.InputLegacyModule">
             <HintPath>$(DuckovPath)$(SubPath)UnityEngine.InputLegacyModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.IMGUIModule">
+            <HintPath>$(DuckovPath)$(SubPath)UnityEngine.IMGUIModule.dll</HintPath>
+        </Reference>
         <Reference Include="UniTask">
             <HintPath>$(DuckovPath)$(SubPath)UniTask.dll</HintPath>
         </Reference>

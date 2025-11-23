@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using ItemStatsSystem;
 using SodaCraft.Localizations;
@@ -72,6 +73,7 @@ namespace TradingCardMod
         private List<GameObject> _createdGameObjects = new List<GameObject>();
         private Tag? _tradingCardTag;
         private Tag? _binderSheetTag;
+        private Tag? _cardBinderContentTag;
         private Item? _binderItem;
         private Item? _cardBoxItem;
 
@@ -84,9 +86,10 @@ namespace TradingCardMod
         // Store pack definitions for runtime lookup (key = "SetName|PackName")
         private Dictionary<string, CardPack> _packDefinitions = new Dictionary<string, CardPack>();
 
-        // Debug: track spawn cycling
-        private int _debugSpawnIndex = 0;
-        private List<Item> _allSpawnableItems = new List<Item>();
+        // Debug spawn window
+        private bool _showSpawnWindow = false;
+        private Rect _spawnWindowRect = new Rect(20, 250, 350, 450);
+        private System.Random _random = new System.Random();
 
         /// <summary>
         /// Called when the GameObject is created. Initialize early to register items before saves load.
@@ -112,6 +115,7 @@ namespace TradingCardMod
                 // Create our custom tags first
                 _tradingCardTag = TagHelper.GetOrCreateTradingCardTag();
                 _binderSheetTag = TagHelper.GetOrCreateBinderSheetTag();
+                _cardBinderContentTag = TagHelper.GetOrCreateCardBinderContentTag();
 
                 // Load and register cards - do this early so saves can load them
                 LoadCardSets();
@@ -121,12 +125,6 @@ namespace TradingCardMod
 
                 // Create card packs
                 CreateCardPacks();
-
-                // Build spawnable items list (cards + storage + packs)
-                _allSpawnableItems.AddRange(_registeredItems);
-                if (_binderItem != null) _allSpawnableItems.Add(_binderItem);
-                if (_cardBoxItem != null) _allSpawnableItems.Add(_cardBoxItem);
-                _allSpawnableItems.AddRange(_registeredPacks);
 
                 Debug.Log("[TradingCardMod] Mod initialized successfully!");
             }
@@ -299,7 +297,7 @@ namespace TradingCardMod
 
             Debug.Log($"[TradingCardMod] Total cards loaded: {_loadedCards.Count}");
             Debug.Log($"[TradingCardMod] Total items registered: {_registeredItems.Count}");
-            Debug.Log("[TradingCardMod] DEBUG: Press F9 to spawn items (cycles through cards, then binder, then box)");
+            Debug.Log("[TradingCardMod] DEBUG: Press F10 to open spawn menu (storage items & random cards by rarity)");
 
             // Clear the search cache so our items can be found
             ClearSearchCache();
@@ -335,7 +333,7 @@ namespace TradingCardMod
         /// </summary>
         private void CreateStorageItems()
         {
-            if (_tradingCardTag == null || _binderSheetTag == null)
+            if (_tradingCardTag == null || _binderSheetTag == null || _cardBinderContentTag == null)
             {
                 Debug.LogError("[TradingCardMod] Cannot create storage items - Required tags not created!");
                 return;
@@ -352,14 +350,17 @@ namespace TradingCardMod
                 new List<Tag> { _tradingCardTag }  // Only trading cards allowed
             );
 
-            // Add BinderSheet tag to the binder sheet item itself so it can be stored in Card Binders
+            // Add BinderSheet and CardBinderContent tags to the binder sheet item itself
+            // so it can be stored in Card Binders
             if (_binderItem != null)
             {
                 _binderItem.Tags.Add(_binderSheetTag);
-                Debug.Log("[TradingCardMod] Added BinderSheet tag to Binder Sheet item");
+                _binderItem.Tags.Add(_cardBinderContentTag);
+                Debug.Log("[TradingCardMod] Added BinderSheet and CardBinderContent tags to Binder Sheet item");
             }
 
-            // Create Card Binder (12 slots, stores cards AND binder sheets)
+            // Create Card Binder (12 slots, stores items with CardBinderContent tag)
+            // This allows both cards and binder sheets (which both have CardBinderContent tag)
             _cardBoxItem = StorageHelper.CreateCardStorage(
                 CARD_BINDER_ITEM_ID,
                 "Card Binder",
@@ -367,7 +368,7 @@ namespace TradingCardMod
                 12,
                 1.5f,  // weight
                 12500,  // value
-                new List<Tag> { _tradingCardTag, _binderSheetTag }  // Cards and binder sheets allowed
+                new List<Tag> { _cardBinderContentTag }  // Only CardBinderContent tag required
             );
         }
 
@@ -431,46 +432,158 @@ namespace TradingCardMod
         /// </summary>
         void Update()
         {
-            // Debug: Press F9 to spawn an item
-            if (Input.GetKeyDown(KeyCode.F9))
+            // Debug: Press F10 to toggle spawn menu
+            if (Input.GetKeyDown(KeyCode.F10))
             {
-                SpawnDebugItem();
+                _showSpawnWindow = !_showSpawnWindow;
+                Debug.Log($"[TradingCardMod] Spawn window {(_showSpawnWindow ? "opened" : "closed")}");
             }
         }
 
         /// <summary>
-        /// Spawns items for testing - cycles through cards, then storage items.
+        /// OnGUI is called for rendering and handling GUI events.
         /// </summary>
-        private void SpawnDebugItem()
+        void OnGUI()
         {
-            if (_allSpawnableItems.Count == 0)
+            if (!_showSpawnWindow)
+                return;
+
+            // Set depth to ensure window is on top
+            UnityEngine.GUI.depth = -1000;
+
+            // Draw window and bring to front
+            _spawnWindowRect = UnityEngine.GUI.Window(12345, _spawnWindowRect, DrawSpawnWindow, "Spawn Items (F10 to close)");
+            UnityEngine.GUI.BringWindowToFront(12345);
+        }
+
+        /// <summary>
+        /// Draws the spawn window contents.
+        /// </summary>
+        private void DrawSpawnWindow(int windowID)
+        {
+            UnityEngine.GUILayout.BeginVertical();
+
+            // Storage items
+            UnityEngine.GUILayout.Label("Storage Items:", UnityEngine.GUI.skin.box);
+
+            if (UnityEngine.GUILayout.Button("Card Binder"))
             {
-                Debug.LogWarning("[TradingCardMod] No items registered to spawn!");
+                SpawnStorageItem(_cardBoxItem, "Card Binder");
+            }
+
+            if (UnityEngine.GUILayout.Button("Binder Sheet"))
+            {
+                SpawnStorageItem(_binderItem, "Binder Sheet");
+            }
+
+            UnityEngine.GUILayout.Space(10);
+
+            // Random cards by rarity
+            UnityEngine.GUILayout.Label("Spawn Random Card:", UnityEngine.GUI.skin.box);
+
+            if (UnityEngine.GUILayout.Button("Random Common Card"))
+            {
+                SpawnRandomCardByRarity("Common");
+            }
+
+            if (UnityEngine.GUILayout.Button("Random Uncommon Card"))
+            {
+                SpawnRandomCardByRarity("Uncommon");
+            }
+
+            if (UnityEngine.GUILayout.Button("Random Rare Card"))
+            {
+                SpawnRandomCardByRarity("Rare");
+            }
+
+            if (UnityEngine.GUILayout.Button("Random Very Rare Card"))
+            {
+                SpawnRandomCardByRarity("Very Rare");
+            }
+
+            if (UnityEngine.GUILayout.Button("Random Ultra Rare Card"))
+            {
+                SpawnRandomCardByRarity("Ultra Rare");
+            }
+
+            UnityEngine.GUILayout.EndVertical();
+
+            // Make window draggable
+            UnityEngine.GUI.DragWindow();
+        }
+
+        /// <summary>
+        /// Spawns a storage item (binder or binder sheet).
+        /// </summary>
+        private void SpawnStorageItem(Item? prefab, string itemName)
+        {
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[TradingCardMod] {itemName} not available!");
                 return;
             }
 
-            // Cycle through all spawnable items
-            Item prefab = _allSpawnableItems[_debugSpawnIndex % _allSpawnableItems.Count];
-            _debugSpawnIndex++;
-
             try
             {
-                // Instantiate a fresh copy of the item (don't send prefab directly)
                 Item instance = ItemAssetsCollection.InstantiateSync(prefab.TypeID);
                 if (instance != null)
                 {
-                    // Use game's utility to give item to player
                     ItemUtilities.SendToPlayer(instance);
-                    Debug.Log($"[TradingCardMod] Spawned: {instance.DisplayName} (ID: {instance.TypeID})");
+                    Debug.Log($"[TradingCardMod] Spawned: {itemName}");
                 }
                 else
                 {
-                    Debug.LogError($"[TradingCardMod] Failed to instantiate {prefab.DisplayName} (ID: {prefab.TypeID})");
+                    Debug.LogError($"[TradingCardMod] Failed to instantiate {itemName}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[TradingCardMod] Failed to spawn item: {ex.Message}");
+                Debug.LogError($"[TradingCardMod] Failed to spawn {itemName}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Spawns a random card of the specified rarity.
+        /// </summary>
+        private void SpawnRandomCardByRarity(string rarity)
+        {
+            // Find all cards of this rarity
+            var matchingCards = _loadedCards
+                .Where(c => c.Rarity.Equals(rarity, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (matchingCards.Count == 0)
+            {
+                Debug.LogWarning($"[TradingCardMod] No {rarity} cards found!");
+                return;
+            }
+
+            // Pick a random card
+            TradingCard randomCard = matchingCards[_random.Next(matchingCards.Count)];
+
+            // Get the item ID for this card
+            if (!_cardNameToTypeId.TryGetValue(randomCard.CardName, out int typeId))
+            {
+                Debug.LogError($"[TradingCardMod] Card '{randomCard.CardName}' not registered!");
+                return;
+            }
+
+            try
+            {
+                Item instance = ItemAssetsCollection.InstantiateSync(typeId);
+                if (instance != null)
+                {
+                    ItemUtilities.SendToPlayer(instance);
+                    Debug.Log($"[TradingCardMod] Spawned random {rarity}: {randomCard.CardName}");
+                }
+                else
+                {
+                    Debug.LogError($"[TradingCardMod] Failed to instantiate card: {randomCard.CardName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[TradingCardMod] Failed to spawn card: {ex.Message}");
             }
         }
 
@@ -602,6 +715,12 @@ namespace TradingCardMod
                 if (_tradingCardTag != null)
                 {
                     item.Tags.Add(_tradingCardTag);
+                }
+
+                // Add CardBinderContent tag so cards can be stored in Card Binders
+                if (_cardBinderContentTag != null)
+                {
+                    item.Tags.Add(_cardBinderContentTag);
                 }
 
                 // Load and set icon
@@ -793,7 +912,6 @@ namespace TradingCardMod
             _cardNameToTypeId.Clear();
             _registeredPacks.Clear();
             _packDefinitions.Clear();
-            _allSpawnableItems.Clear();
 
             Debug.Log("[TradingCardMod] Cleanup complete.");
         }
