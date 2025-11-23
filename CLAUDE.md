@@ -136,7 +136,10 @@ Key namespaces and APIs from the game:
 - Cards load from `CardSets/*/cards.txt` files with optional descriptions
 - Custom PNG images display as item icons
 - Cards register as game items with proper TypeIDs
-- Custom tags: "TradingCard" and "BinderSheet" for filtering
+- Custom tags for slot filtering:
+  - "TradingCard": Identifies trading cards
+  - "BinderSheet": Identifies binder sheet items
+  - "CardBinderContent": Parent tag for both cards and binder sheets (enables hierarchical storage)
 - Card packs with gacha-style mechanics (weighted random distribution)
 - Hierarchical storage system:
   - **Binder Sheet** (9 slots, weight 0.1): Holds trading cards only
@@ -146,7 +149,10 @@ Key namespaces and APIs from the game:
 - ModConfig integration:
   - Enhanced card info display (set name, number, rarity)
   - Mod statistics display (total cards, packs, disabled sets)
-- Debug spawn with F9 key (for testing)
+- Debug spawn window with F10 key (for testing):
+  - Spawn storage items (Card Binder, Binder Sheet)
+  - Spawn random cards by rarity
+  - Draggable OnGUI window interface
 - Deploy/remove scripts for quick iteration
 - Unit tests for parsing logic and pack system
 
@@ -157,8 +163,9 @@ Based on analysis of the AdditionalCollectibles mod:
 1. **Clone existing game items** as templates (base item ID 135)
 2. **Use reflection** to set private fields (typeID, weight, value, etc.)
 3. **Create custom tags** by cloning existing ScriptableObject tags
-4. **Load sprites** from user files in `CardSets/*/images/`
-5. **Attach custom behaviors** for pack opening mechanics
+4. **Parent tag pattern** for slot filtering (Unity's requireTags uses AND logic, so parent tags enable OR-like behavior)
+5. **Load sprites** from user files in `CardSets/*/images/`
+6. **Attach custom behaviors** for pack opening mechanics
 
 ### Future Considerations
 
