@@ -6,9 +6,12 @@ A customizable trading card system that lets you add your own card sets to the g
 
 - **Custom Card Sets** - Create your own trading cards with custom artwork and stats
 - **Card Packs** - Open randomized card packs with gacha-style rarity distribution
-- **Storage System** - Organize your collection with 9-slot binders and 18-slot card boxes
+- **Hierarchical Storage System** - Organize your collection with:
+  - **Binder Sheets** (9 slots, lightweight) - Hold individual cards
+  - **Card Binders** (12 slots) - Hold cards OR binder sheets for nested storage
+- **Card Set Management** - Disable card sets by prefixing folder names with `_`
 - **User-Friendly Format** - Define cards using simple pipe-separated text files
-- **ModConfig Integration** - Enhanced card info display when ModConfig is installed (optional)
+- **ModConfig Integration** - Enhanced card info display and mod statistics (optional)
 - **No Programming Required** - Add new card sets without writing any code
 
 ## Requirements
@@ -21,7 +24,9 @@ This mod requires the HarmonyLoadMod to be installed. It provides the Harmony li
 **Optional Mod Dependency:**
 - [ModConfig](https://steamcommunity.com/sharedfiles/filedetails/?id=3592433938) - Subscribe on Steam Workshop
 
-ModConfig is optional but recommended. When installed, it adds card set information (set name, card number, rarity) to the item description in your inventory, making it easier to identify and organize your cards.
+ModConfig is optional but recommended. When installed, it:
+- Adds card set information (set name, card number, rarity) to item descriptions in your inventory
+- Displays mod statistics including total cards loaded, packs available, and disabled card sets
 
 ## Installation
 
@@ -80,6 +85,27 @@ Lines starting with `#` are treated as comments and ignored:
 # CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value
 Blue Dragon | Fantasy Set | 001 | blue_dragon.png | Ultra Rare | 0.01 | 500
 ```
+
+## Disabling Card Sets
+
+To temporarily disable a card set without deleting it, prefix the folder name with an underscore `_`:
+
+```
+CardSets/
+├── MyActiveSet/          # This set will load
+├── _MyTestSet/           # This set will be skipped
+└── _SeasonalCards/       # This set will be skipped
+```
+
+Disabled sets are:
+- Skipped during mod initialization
+- Logged in the game console for reference
+- Counted and displayed in ModConfig (if installed)
+
+This is useful for:
+- Work-in-progress card sets
+- Seasonal or event-specific content
+- Testing different configurations
 
 ## Folder Structure
 

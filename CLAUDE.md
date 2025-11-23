@@ -79,7 +79,9 @@ The game loads mods from `Duckov_Data/Mods/`. Each mod requires:
 
 - **`PackUsageBehavior`** (`src/PackUsageBehavior.cs`): Handles card pack opening mechanics. Implements gacha-style random card distribution based on rarity weights.
 
-- **`ModConfigApi`** (`src/ModConfigApi.cs`): Optional integration with ModConfig mod. Adds card set information (set name, card number, rarity) to item descriptions in inventory.
+- **`ModConfigApi`** (`src/ModConfigApi.cs`): Optional integration with ModConfig mod. Adds card set information (set name, card number, rarity) to item descriptions in inventory. Also displays mod statistics including disabled card sets count.
+
+- **`StorageHelper`** (`src/StorageHelper.cs`): Helper class for creating storage items with multi-tag slot filtering, enabling hierarchical storage systems.
 
 ### Dependencies
 
@@ -97,6 +99,8 @@ CardName | SetName | SetNumber | ImageFile | Rarity | Weight | Value | Descripti
 The Description field is optional. If provided, it will be displayed in the item's in-game description/tooltip.
 
 Images go in `CardSets/{SetName}/images/`.
+
+**Disabling Card Sets:** Prefix a card set folder name with `_` (underscore) to exclude it from loading. For example, `_TestSet/` will be skipped. This is useful for work-in-progress sets or seasonal content. The count of disabled sets is displayed in ModConfig.
 
 ## Game API Reference
 
@@ -132,10 +136,16 @@ Key namespaces and APIs from the game:
 - Cards load from `CardSets/*/cards.txt` files with optional descriptions
 - Custom PNG images display as item icons
 - Cards register as game items with proper TypeIDs
-- Custom "TradingCard" tag for filtering
+- Custom tags: "TradingCard" and "BinderSheet" for filtering
 - Card packs with gacha-style mechanics (weighted random distribution)
-- Storage system with slot-based filtering (9-slot binders, 18-slot boxes)
-- ModConfig integration for enhanced card info display (set name, number, rarity)
+- Hierarchical storage system:
+  - **Binder Sheet** (9 slots, weight 0.1): Holds trading cards only
+  - **Card Binder** (12 slots, weight 1.5): Holds trading cards OR binder sheets
+  - Nested storage: Cards → Binder Sheets → Card Binders
+- Card set exclusion: Prefix folders with `_` to disable loading
+- ModConfig integration:
+  - Enhanced card info display (set name, number, rarity)
+  - Mod statistics display (total cards, packs, disabled sets)
 - Debug spawn with F9 key (for testing)
 - Deploy/remove scripts for quick iteration
 - Unit tests for parsing logic and pack system
@@ -153,8 +163,7 @@ Based on analysis of the AdditionalCollectibles mod:
 ### Future Considerations
 
 - Investigate new ItemBuilder API (added in recent game update) as potential replacement for reflection-based approach
-- Additional storage variants or customization options
-- Binder sheets which hold cards are are held by binders
+- Additional storage variants or customization options (e.g., larger binders, themed storage boxes)
 
 ### Log File Location
 

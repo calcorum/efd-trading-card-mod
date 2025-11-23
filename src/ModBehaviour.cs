@@ -63,14 +63,15 @@ namespace TradingCardMod
         private const int BASE_ITEM_ID = 135;
 
         // Storage item IDs (high range to avoid conflicts)
-        private const int BINDER_ITEM_ID = 200001;
-        private const int CARD_BOX_ITEM_ID = 200002;
+        private const int BINDER_SHEET_ITEM_ID = 200001;
+        private const int CARD_BINDER_ITEM_ID = 200002;
 
         private string _modPath = string.Empty;
         private List<TradingCard> _loadedCards = new List<TradingCard>();
         private List<Item> _registeredItems = new List<Item>();
         private List<GameObject> _createdGameObjects = new List<GameObject>();
         private Tag? _tradingCardTag;
+        private Tag? _binderSheetTag;
         private Item? _binderItem;
         private Item? _cardBoxItem;
 
@@ -78,6 +79,7 @@ namespace TradingCardMod
         private Dictionary<string, List<TradingCard>> _cardsBySet = new Dictionary<string, List<TradingCard>>();
         private Dictionary<string, int> _cardNameToTypeId = new Dictionary<string, int>();
         private List<Item> _registeredPacks = new List<Item>();
+        private int _skippedSetsCount = 0;
 
         // Store pack definitions for runtime lookup (key = "SetName|PackName")
         private Dictionary<string, CardPack> _packDefinitions = new Dictionary<string, CardPack>();
@@ -107,8 +109,9 @@ namespace TradingCardMod
                 // Log all available tags for reference
                 TagHelper.LogAvailableTags();
 
-                // Create our custom tag first
+                // Create our custom tags first
                 _tradingCardTag = TagHelper.GetOrCreateTradingCardTag();
+                _binderSheetTag = TagHelper.GetOrCreateBinderSheetTag();
 
                 // Load and register cards - do this early so saves can load them
                 LoadCardSets();
@@ -220,6 +223,20 @@ namespace TradingCardMod
                 _registeredPacks.Count
             );
 
+            // Skipped sets display
+            var skippedOption = new System.Collections.Generic.SortedDictionary<string, object>
+            {
+                { $"{_skippedSetsCount} sets", _skippedSetsCount }
+            };
+            ModConfigAPI.SafeAddDropdownList(
+                MOD_NAME,
+                "SkippedSets",
+                "Disabled Card Sets",
+                skippedOption,
+                typeof(int),
+                _skippedSetsCount
+            );
+
             // Card sets info - one entry per set for clarity
             int setIndex = 0;
             foreach (var setEntry in _cardsBySet)
@@ -259,9 +276,25 @@ namespace TradingCardMod
             string[] setDirectories = Directory.GetDirectories(cardSetsPath);
             Debug.Log($"[TradingCardMod] Found {setDirectories.Length} card set directories");
 
+            _skippedSetsCount = 0;
             foreach (string setDir in setDirectories)
             {
+                string setName = Path.GetFileName(setDir);
+
+                // Skip directories that start with underscore (disabled sets)
+                if (setName.StartsWith("_"))
+                {
+                    Debug.Log($"[TradingCardMod] Skipping disabled card set: {setName}");
+                    _skippedSetsCount++;
+                    continue;
+                }
+
                 LoadCardSet(setDir);
+            }
+
+            if (_skippedSetsCount > 0)
+            {
+                Debug.Log($"[TradingCardMod] Skipped {_skippedSetsCount} disabled card set(s)");
             }
 
             Debug.Log($"[TradingCardMod] Total cards loaded: {_loadedCards.Count}");
@@ -298,36 +331,43 @@ namespace TradingCardMod
         }
 
         /// <summary>
-        /// Creates storage items (binder and card box) for holding trading cards.
+        /// Creates storage items (binder sheet and card binder) for holding trading cards.
         /// </summary>
         private void CreateStorageItems()
         {
-            if (_tradingCardTag == null)
+            if (_tradingCardTag == null || _binderSheetTag == null)
             {
-                Debug.LogError("[TradingCardMod] Cannot create storage items - TradingCard tag not created!");
+                Debug.LogError("[TradingCardMod] Cannot create storage items - Required tags not created!");
                 return;
             }
 
-            // Create Card Binder (9 slots = 3x3 grid)
+            // Create Binder Sheet (9 slots, stores cards only)
             _binderItem = StorageHelper.CreateCardStorage(
-                BINDER_ITEM_ID,
-                "Card Binder",
-                "A binder for storing and organizing trading cards. Holds 9 cards.",
+                BINDER_SHEET_ITEM_ID,
+                "Binder Sheet",
+                "A sheet for storing and organizing trading cards. Holds 9 cards.",
                 9,
-                1.5f,  // weight
+                0.1f,  // weight
                 7500,   // value
-                _tradingCardTag
+                new List<Tag> { _tradingCardTag }  // Only trading cards allowed
             );
 
-            // Create Card Box (36 slots = bulk storage)
+            // Add BinderSheet tag to the binder sheet item itself so it can be stored in Card Binders
+            if (_binderItem != null)
+            {
+                _binderItem.Tags.Add(_binderSheetTag);
+                Debug.Log("[TradingCardMod] Added BinderSheet tag to Binder Sheet item");
+            }
+
+            // Create Card Binder (12 slots, stores cards AND binder sheets)
             _cardBoxItem = StorageHelper.CreateCardStorage(
-                CARD_BOX_ITEM_ID,
-                "Card Box",
-                "A large box for bulk storage of trading cards. Holds 36 cards.",
-                36,
-                2.0f,  // weight
-                37500,  // value
-                _tradingCardTag
+                CARD_BINDER_ITEM_ID,
+                "Card Binder",
+                "A binder for storing and organizing trading cards. Can hold cards or binder sheets. Holds 12 items.",
+                12,
+                1.5f,  // weight
+                12500,  // value
+                new List<Tag> { _tradingCardTag, _binderSheetTag }  // Cards and binder sheets allowed
             );
         }
 

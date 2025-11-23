@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using ItemStatsSystem;
@@ -22,7 +23,7 @@ namespace TradingCardMod
         private static readonly List<GameObject> _createdGameObjects = new List<GameObject>();
 
         /// <summary>
-        /// Creates a card binder item with slots that only accept TradingCard tagged items.
+        /// Creates a card binder item with slots that only accept items with specific tags.
         /// </summary>
         /// <param name="itemId">Unique ID for this storage item</param>
         /// <param name="displayName">Display name shown to player</param>
@@ -30,7 +31,7 @@ namespace TradingCardMod
         /// <param name="slotCount">Number of card slots</param>
         /// <param name="weight">Item weight</param>
         /// <param name="value">Item value</param>
-        /// <param name="tradingCardTag">The TradingCard tag for filtering</param>
+        /// <param name="allowedTags">List of tags that can be stored in this container</param>
         /// <param name="icon">Optional custom icon sprite</param>
         /// <returns>The created Item, or null on failure</returns>
         public static Item? CreateCardStorage(
@@ -40,7 +41,7 @@ namespace TradingCardMod
             int slotCount,
             float weight,
             int value,
-            Tag tradingCardTag,
+            List<Tag> allowedTags,
             Sprite? icon = null)
         {
             try
@@ -87,8 +88,8 @@ namespace TradingCardMod
                     item.Tags.Add(toolTag);
                 }
 
-                // Configure slots to only accept TradingCard tagged items
-                ConfigureCardSlots(item, tradingCardTag, slotCount);
+                // Configure slots to only accept items with allowed tags
+                ConfigureCardSlots(item, allowedTags, slotCount);
 
                 // Set icon if provided
                 if (icon != null)
@@ -123,9 +124,9 @@ namespace TradingCardMod
         }
 
         /// <summary>
-        /// Configures an item's slots to only accept items with a specific tag.
+        /// Configures an item's slots to only accept items with specific tags.
         /// </summary>
-        private static void ConfigureCardSlots(Item item, Tag requiredTag, int slotCount)
+        private static void ConfigureCardSlots(Item item, List<Tag> requiredTags, int slotCount)
         {
             // Get template slot info if available
             Slot templateSlot = new Slot();
@@ -147,13 +148,17 @@ namespace TradingCardMod
                 typeof(Slot).GetField("key", BindingFlags.Instance | BindingFlags.NonPublic)
                     ?.SetValue(newSlot, $"CardSlot{i}");
 
-                // Add tag requirement - only TradingCard items can go in
-                newSlot.requireTags.Add(requiredTag);
+                // Add all tag requirements - only items with these tags can go in
+                foreach (var tag in requiredTags)
+                {
+                    newSlot.requireTags.Add(tag);
+                }
 
                 item.Slots.Add(newSlot);
             }
 
-            Debug.Log($"[TradingCardMod] Configured {slotCount} slots with TradingCard filter");
+            string tagNames = string.Join(", ", requiredTags.Select(t => t.name));
+            Debug.Log($"[TradingCardMod] Configured {slotCount} slots with filter: {tagNames}");
         }
 
         /// <summary>

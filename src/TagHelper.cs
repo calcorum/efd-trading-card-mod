@@ -83,6 +83,16 @@ namespace TradingCardMod
         }
 
         /// <summary>
+        /// Gets the "BinderSheet" tag, creating it if it doesn't exist.
+        /// This tag identifies binder sheets that can be stored in card binders.
+        /// </summary>
+        /// <returns>The BinderSheet tag.</returns>
+        public static Tag GetOrCreateBinderSheetTag()
+        {
+            return CreateOrCloneTag("BinderSheet", "Binder Sheet");
+        }
+
+        /// <summary>
         /// Gets all tags created by this mod.
         /// </summary>
         /// <returns>List of tags created by the mod.</returns>
